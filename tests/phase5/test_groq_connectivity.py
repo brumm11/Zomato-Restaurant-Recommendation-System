@@ -2,6 +2,7 @@ import json
 import os
 
 import httpx
+import pytest
 
 
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
@@ -18,6 +19,11 @@ def _api_key() -> str:
 
 def _model_name() -> str:
     return os.getenv("GROQ_MODEL", "") or os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
+
+
+def _live_tests_enabled() -> bool:
+    # CI-safe default: do not run live external API tests unless explicitly enabled.
+    return os.getenv("RUN_LIVE_LLM_TESTS", "0") == "1"
 
 
 def _client() -> httpx.Client:
@@ -41,11 +47,15 @@ def _get_json(url: str) -> dict:
 
 
 def test_01_api_key_is_available() -> None:
+    if not _live_tests_enabled():
+        pytest.skip("Live LLM tests disabled. Set RUN_LIVE_LLM_TESTS=1 to run.")
     key = _api_key()
     assert key, "No API key found. Set GROQ_API_KEY (or LLM_API_KEY) in .env."
 
 
 def test_02_models_endpoint_reachable() -> None:
+    if not _live_tests_enabled():
+        pytest.skip("Live LLM tests disabled. Set RUN_LIVE_LLM_TESTS=1 to run.")
     data = _get_json(f"{GROQ_BASE_URL}/models")
     assert "data" in data
     assert isinstance(data["data"], list)
@@ -53,6 +63,8 @@ def test_02_models_endpoint_reachable() -> None:
 
 
 def test_03_chat_completion_returns_text() -> None:
+    if not _live_tests_enabled():
+        pytest.skip("Live LLM tests disabled. Set RUN_LIVE_LLM_TESTS=1 to run.")
     payload = {
         "model": _model_name(),
         "messages": [{"role": "user", "content": "Reply with exactly: CONNECTED"}],
@@ -67,6 +79,8 @@ def test_03_chat_completion_returns_text() -> None:
 
 
 def test_04_chat_completion_format_check() -> None:
+    if not _live_tests_enabled():
+        pytest.skip("Live LLM tests disabled. Set RUN_LIVE_LLM_TESTS=1 to run.")
     payload = {
         "model": _model_name(),
         "messages": [
