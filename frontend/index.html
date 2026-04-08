@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Restaurant Recommendations</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main class="container">
+    <h1>AI Restaurant Recommendations</h1>
+    <p class="subtitle">Share your preferences and get ranked restaurant suggestions.</p>
+
+    <section class="panel">
+      <h2>Preference Form</h2>
+      <form id="pref-form">
+        <div class="grid">
+          <label>
+            Location
+            <input id="location" name="location" required placeholder="e.g. delhi">
+          </label>
+
+          <label>
+            Budget
+            <select id="budget" name="budget">
+              <option value="">Any</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+
+          <label>
+            Cuisine
+            <input id="cuisine" name="cuisine" placeholder="e.g. north indian, chinese">
+          </label>
+
+          <label>
+            Minimum Rating (0-5)
+            <input id="min_rating" name="min_rating" type="number" min="0" max="5" step="0.1">
+          </label>
+
+          <label class="wide">
+            Additional Preferences
+            <input id="additional_preferences" name="additional_preferences" placeholder="e.g. family friendly, quick service">
+          </label>
+
+          <label>
+            Top K
+            <input id="top_k" name="top_k" type="number" min="1" max="10" value="5">
+          </label>
+        </div>
+        <button id="submit-btn" type="submit">Get Recommendations</button>
+      </form>
+    </section>
+
+    <section id="status-panel" class="panel">
+      <h2>Status</h2>
+      <p id="status-text">Idle: fill the form and submit.</p>
+    </section>
+
+    <section id="results-panel" class="panel">
+      <h2>Results Panel</h2>
+      <p id="meta"></p>
+      <div id="fallback-note" class="hidden warn"></div>
+      <div id="warnings" class="hidden warn"></div>
+      <div id="empty-state" class="hidden">No recommendations found. Try relaxing filters.</div>
+      <div id="cards" class="cards"></div>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
