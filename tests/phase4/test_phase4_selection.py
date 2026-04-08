@@ -80,3 +80,36 @@ def test_phase4_returns_warning_when_dataset_missing(monkeypatch) -> None:
     assert result.candidates == []
     assert result.ranking_source == "rule_based_fallback"
     assert len(result.warnings) == 1
+
+
+def test_phase4_relaxes_filters_when_strict_match_empty(tmp_path, monkeypatch) -> None:
+    data_file = tmp_path / "restaurants_normalized.jsonl"
+    rows = [
+        {
+            "restaurant_id": "r1",
+            "name": "Aroma",
+            "city": "bangalore",
+            "area": "indiranagar",
+            "cuisines": ["north-indian"],
+            "avg_cost_for_two": 500,
+            "budget_tier": "low",
+            "rating": 4.1,
+            "tags": [],
+        }
+    ]
+    data_file.write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
+    monkeypatch.setattr("backend.phases.phase4.service.settings.normalized_data_path", str(data_file))
+
+    pref = UserPreference(
+        location="bangalore",
+        budget="medium",  # strict budget mismatch
+        budget_cost_range={"min": 801, "max": 2000},
+        cuisines=["north-indian"],
+        min_rating=4.0,
+        additional_preferences=None,
+        preference_keywords=[],
+        top_k=5,
+    )
+    result = select_candidates(pref)
+    assert len(result.candidates) == 1
+    assert any("budget filter relaxed" in w.lower() for w in result.warnings)

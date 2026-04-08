@@ -21,25 +21,63 @@ def select_candidates(user_pref: UserPreference, candidate_pool_size: int = 30) 
             warnings=["No normalized dataset available. Run Phase 2 ingestion first."],
         )
 
-    filtered = [r for r in rows if str(r.get("city", "")).lower() == user_pref.location]
+    warnings: list[str] = []
+    city_rows = [r for r in rows if str(r.get("city", "")).lower() == user_pref.location]
+    if not city_rows:
+        return CandidateSelectionResult(
+            candidates=[],
+            ranking_source="rule_based_fallback",
+            warnings=[f"No restaurants found for city '{user_pref.location}' in current dataset."],
+        )
 
-    if user_pref.budget:
-        filtered = [r for r in filtered if str(r.get("budget_tier", "")).lower() == user_pref.budget]
+    # Strict filter pass.
+    filtered = _apply_filters(city_rows, user_pref, use_budget=True, use_cuisine=True, use_rating=True)
 
-    if user_pref.cuisines:
-        requested = set(user_pref.cuisines)
-        filtered = [r for r in filtered if requested.intersection(set(r.get("cuisines", [])))]
+    # Graceful relaxation when strict criteria yields no candidates.
+    if not filtered and (user_pref.budget or user_pref.cuisines or user_pref.min_rating is not None):
+        filtered = _apply_filters(city_rows, user_pref, use_budget=False, use_cuisine=True, use_rating=True)
+        if filtered:
+            warnings.append("No strict budget match found; budget filter relaxed.")
 
-    if user_pref.min_rating is not None:
-        filtered = [r for r in filtered if (r.get("rating") or 0) >= user_pref.min_rating]
+    if not filtered and (user_pref.cuisines or user_pref.min_rating is not None):
+        filtered = _apply_filters(city_rows, user_pref, use_budget=False, use_cuisine=False, use_rating=True)
+        if filtered:
+            warnings.append("No strict cuisine match found; cuisine filter relaxed.")
+
+    if not filtered:
+        filtered = _apply_filters(city_rows, user_pref, use_budget=False, use_cuisine=False, use_rating=False)
+        if filtered:
+            warnings.append("No strict rating threshold match found; rating filter relaxed.")
 
     scored = [_to_candidate(row, user_pref) for row in filtered]
     scored.sort(key=lambda c: c.score, reverse=True)
     return CandidateSelectionResult(
         candidates=scored[:candidate_pool_size],
         ranking_source="rule_based_fallback",
-        warnings=[],
+        warnings=warnings,
     )
+
+
+def _apply_filters(
+    rows: list[dict[str, Any]],
+    user_pref: UserPreference,
+    use_budget: bool,
+    use_cuisine: bool,
+    use_rating: bool,
+) -> list[dict[str, Any]]:
+    filtered = rows
+
+    if use_budget and user_pref.budget:
+        filtered = [r for r in filtered if str(r.get("budget_tier", "")).lower() == user_pref.budget]
+
+    if use_cuisine and user_pref.cuisines:
+        requested = set(user_pref.cuisines)
+        filtered = [r for r in filtered if requested.intersection(set(r.get("cuisines", [])))]
+
+    if use_rating and user_pref.min_rating is not None:
+        filtered = [r for r in filtered if (r.get("rating") or 0) >= user_pref.min_rating]
+
+    return filtered
 
 
 def _to_candidate(row: dict[str, Any], user_pref: UserPreference) -> CandidateRestaurant:
