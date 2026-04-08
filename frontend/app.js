@@ -7,6 +7,10 @@ const warnings = document.getElementById("warnings");
 const fallbackNote = document.getElementById("fallback-note");
 const emptyState = document.getElementById("empty-state");
 
+const BACKEND_BASE_URL =
+  window.BACKEND_BASE_URL ||
+  "https://zomato-restaurant-recommendation-system-nv8cnjoe2ecuqug9opoq62.streamlit.app";
+
 function setStatus(text) {
   statusText.textContent = text;
 }
@@ -73,11 +77,20 @@ form.addEventListener("submit", async (event) => {
   setStatus("Loading: fetching recommendations...");
 
   try {
-    const response = await fetch("/recommendations", {
+    const response = await fetch(`${BACKEND_BASE_URL.replace(/\/$/, "")}/recommendations`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(buildPayload()),
     });
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      setStatus("Error: backend returned non-JSON response.");
+      warnings.textContent =
+        "Configured backend URL does not expose JSON API at /recommendations. " +
+        "Deploy FastAPI backend endpoint and point frontend to that URL.";
+      warnings.classList.remove("hidden");
+      return;
+    }
     const data = await response.json();
 
     if (!response.ok) {

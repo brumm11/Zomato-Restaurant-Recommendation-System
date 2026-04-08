@@ -12,3 +12,16 @@ Implemented UX states:
 - error
 - empty results
 - fallback indicator (`rule_based_fallback`)
+
+## Vercel Deployment
+
+This frontend is static and can be deployed directly on Vercel.
+
+Important:
+- `app.js` calls `${BACKEND_BASE_URL}/recommendations` and expects **JSON**.
+- If the backend URL serves HTML (for example a Streamlit UI page), frontend API calls will fail with a non-JSON error.
+
+Current default backend URL in `app.js`:
+- `https://zomato-restaurant-recommendation-system-nv8cnjoe2ecuqug9opoq62.streamlit.app`
+
+For production-grade frontend integration, point `BACKEND_BASE_URL` to a deployed API endpoint that exposes `POST /recommendations` as JSON.
